@@ -245,12 +245,18 @@ class NetworkMonitor:
         
         try:
             import urllib.request
+            import ssl
             
-            # Download một file nhỏ để test
-            test_url = "http://speedtest.ftp.otenet.gr/files/test1Mb.db"
+            # Download một file nhỏ để test (sử dụng HTTPS cho bảo mật)
+            test_url = "https://proof.ovh.net/files/1Mb.dat"
+            
+            # Tạo SSL context để xử lý HTTPS
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
             
             start_time = time.time()
-            response = urllib.request.urlopen(test_url, timeout=15)
+            response = urllib.request.urlopen(test_url, timeout=15, context=ctx)
             data = response.read()
             end_time = time.time()
             
@@ -352,12 +358,16 @@ class NetworkMonitor:
                     print(output[:300] + "..." if len(output) > 300 else output)
                 
             elif self.os_type == "Darwin":  # macOS
-                result = subprocess.run(['/usr/libexec/ApplicationFirewall/socketfilterfw', '--getglobalstate'], 
-                                      capture_output=True, text=True, timeout=10)
-                output = result.stdout
-                firewall_info['enabled'] = 'enabled' in output.lower()
-                print(f"Tường lửa: {'BẬT' if firewall_info['enabled'] else 'TẮT'}")
-                print(output)
+                try:
+                    result = subprocess.run(['/usr/libexec/ApplicationFirewall/socketfilterfw', '--getglobalstate'], 
+                                          capture_output=True, text=True, timeout=10)
+                    output = result.stdout
+                    firewall_info['enabled'] = 'enabled' in output.lower()
+                    print(f"Tường lửa: {'BẬT' if firewall_info['enabled'] else 'TẮT'}")
+                    print(output)
+                except FileNotFoundError:
+                    print("Không tìm thấy công cụ firewall trên macOS này.")
+                    firewall_info['error'] = 'Firewall tool not found'
                 
         except PermissionError:
             print("Không có quyền kiểm tra tường lửa. Cần chạy với quyền administrator/sudo.")
