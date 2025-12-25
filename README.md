@@ -39,6 +39,18 @@ cd Tools
 # Không cần cài đặt thêm dependencies - chỉ cần Python 3
 ```
 
+## Cấu trúc dự án / Project Structure
+
+```
+Tools/
+├── network_monitor.py      # Main program - Chương trình chính
+├── demo.py                 # Usage examples - Ví dụ sử dụng
+├── test_network_monitor.py # Test suite - Bộ test
+├── requirements.txt        # Dependencies (none required)
+├── README.md              # Documentation
+└── .gitignore            # Git ignore file
+```
+
 ## Sử dụng / Usage
 
 ### Chạy chương trình cơ bản:
@@ -57,6 +69,18 @@ python network_monitor.py
 **Linux/macOS:**
 ```bash
 sudo python3 network_monitor.py
+```
+
+### Chạy demo với các ví dụ:
+
+```bash
+python3 demo.py
+```
+
+### Chạy tests:
+
+```bash
+python3 test_network_monitor.py
 ```
 
 ## Ví dụ kết quả / Example Output
