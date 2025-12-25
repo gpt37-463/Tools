@@ -18,6 +18,11 @@ class NetworkMonitor:
         self.os_type = platform.system()
         self.results = {}
         
+        # Constants for WiFi signal strength calculation
+        self.RSSI_MIN = -90  # Minimum RSSI value (dBm)
+        self.RSSI_MAX = -30  # Maximum RSSI value (dBm)
+        self.RSSI_RANGE = 60  # Range for conversion (RSSI_MAX - RSSI_MIN)
+        
     def check_network_config(self):
         """Kiểm tra cấu hình mạng"""
         print("\n=== KIỂM TRA CẤU HÌNH MẠNG ===")
@@ -155,8 +160,9 @@ class NetworkMonitor:
                 rssi_match = re.search(r'agrCtlRSSI:\s+(-?\d+)', output)
                 if rssi_match:
                     rssi = int(rssi_match.group(1))
-                    # Chuyển đổi RSSI sang phần trăm (thang đo thường từ -90 đến -30)
-                    wifi_info['signal_strength'] = max(0, min(100, (rssi + 90) * (100 / 60)))
+                    # Chuyển đổi RSSI sang phần trăm
+                    wifi_info['signal_strength'] = max(0, min(100, 
+                        (rssi - self.RSSI_MIN) * (100 / self.RSSI_RANGE)))
                     print(f"Cường độ tín hiệu: {wifi_info['signal_strength']:.0f}%")
                     wifi_info['signal_grade'] = self.grade_signal(wifi_info['signal_strength'])
                     print(f"Đánh giá tín hiệu: {wifi_info['signal_grade']}")
@@ -247,26 +253,43 @@ class NetworkMonitor:
             import urllib.request
             import ssl
             
-            # Download một file nhỏ để test (sử dụng HTTPS cho bảo mật)
-            test_url = "https://proof.ovh.net/files/1Mb.dat"
+            # Danh sách các URL test để thử (fallback nếu một URL không hoạt động)
+            test_urls = [
+                "https://proof.ovh.net/files/1Mb.dat",
+                "https://speed.hetzner.de/1MB.bin"
+            ]
             
-            # Tạo SSL context để xử lý HTTPS
+            # Cảnh báo về việc tắt SSL verification
+            print("⚠ Lưu ý: SSL certificate verification được tắt để tương thích với nhiều server test")
+            
+            # Tạo SSL context (tắt verification để tương thích)
             ctx = ssl.create_default_context()
             ctx.check_hostname = False
             ctx.verify_mode = ssl.CERT_NONE
             
-            start_time = time.time()
-            response = urllib.request.urlopen(test_url, timeout=15, context=ctx)
-            data = response.read()
-            end_time = time.time()
+            last_error = None
+            for test_url in test_urls:
+                try:
+                    start_time = time.time()
+                    response = urllib.request.urlopen(test_url, timeout=15, context=ctx)
+                    data = response.read()
+                    end_time = time.time()
+                    
+                    # Tính toán tốc độ (Mbps)
+                    file_size_mb = len(data) / (1024 * 1024)
+                    duration = end_time - start_time
+                    speed_mbps = (file_size_mb * 8) / duration
+                    
+                    print(f"Tốc độ download: {speed_mbps:.2f} Mbps")
+                    return speed_mbps
+                    
+                except Exception as e:
+                    last_error = e
+                    continue
             
-            # Tính toán tốc độ (Mbps)
-            file_size_mb = len(data) / (1024 * 1024)
-            duration = end_time - start_time
-            speed_mbps = (file_size_mb * 8) / duration
+            # Nếu tất cả URL đều thất bại
+            raise last_error if last_error else Exception("No test URLs available")
             
-            print(f"Tốc độ download: {speed_mbps:.2f} Mbps")
-            return speed_mbps
             
         except Exception as e:
             print(f"Không thể kiểm tra tốc độ download: {e}")
